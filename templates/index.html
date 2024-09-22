@@ -1,0 +1,339 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Video Meme Background Editor</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Set a scrollable page */
+html, body {
+    min-height: 100vh;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+    padding-bottom: 50px; /* Ensures space at the bottom for scrolling */
+}
+
+/* Set normal flow for body (remove flexbox) */
+body {
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #74ebd5 0%, #ACB6E5 100%);
+    color: #333;
+    padding: 20px;
+    margin: 0;
+}
+
+/* Main container (grows with content) */
+.container {
+    width: 100%;
+    max-width: 600px;
+    padding: 20px;
+    background-color: white;
+    border-radius: 15px;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    margin: 0 auto 20px auto; /* Adds spacing at the bottom */
+}
+
+/* Make the header sticky (optional) */
+h1 {
+    font-weight: 700;
+    color: #444;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 0; /* Stick to the top */
+    background-color: white; /* Ensure it's visible */
+    padding: 10px 0;
+    z-index: 100; /* Ensures it's above other elements */
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); /* Add a shadow for visibility */
+}
+
+/* Form styling */
+form {
+    margin-bottom: 30px;
+}
+
+label {
+    font-weight: 500;
+    margin-bottom: 10px;
+    display: block;
+    text-align: left;
+}
+
+input, button {
+    width: 100%;
+    margin: 10px 0;
+    padding: 12px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    outline: none;
+}
+
+input:focus {
+    border-color: #3498db;
+}
+
+button {
+    background-color: #3498db;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+/* Loading spinner */
+#loading-circle {
+    display: none;
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #3498db;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Video section (normal flow stacking) */
+.video-section {
+    margin-bottom: 30px;
+    text-align: left;
+}
+
+video {
+    width: 100%;
+    border-radius: 10px;
+    margin-top: 15px;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.like-button {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 10px;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.like-button:hover {
+    background-color: #c0392b;
+}
+
+.likes-count {
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+/* Padding at the bottom of the page */
+html, body {
+    padding-bottom: 50px; /* Ensures space at the bottom for scrolling */
+}
+
+#videos-container {
+    margin-top: 40px;
+}
+
+#load-more {
+    background-color: #2ecc71;
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    display: none;
+}
+
+#load-more:hover {
+    background-color: #27ae60;
+}
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Video Meme Background Editor</h1>
+
+        <!-- Form for uploading a new video -->
+        <form id="background-form" enctype="multipart/form-data">
+            <label for="image">Upload Background Image (JPG/PNG only):</label>
+            <input type="file" id="image" name="image" accept="image/jpeg, image/png" required><br>
+
+            <label for="text1">Left cat first text:</label>
+            <input type="text" id="text1" name="text1" required><br>
+
+            <label for="text2">Right cat first text:</label>
+            <input type="text" id="text2" name="text2" required><br>
+
+            <label for="text3">Left cat second text:</label>
+            <input type="text" id="text3" name="text3" required><br>
+
+            <label for="text4">Right cat second text:</label>
+            <input type="text" id="text4" name="text4" required><br>
+
+            <button type="submit">Generate Cat MEME</button>
+        </form>
+
+        <!-- Loading circle -->
+        <div id="loading-circle"></div>
+
+        <h2>Uploaded Videos</h2>
+
+        <div id="videos-container">
+            <!-- Existing videos will be listed here -->
+        </div>
+
+        <!-- Load more button -->
+        <button id="load-more">Load More</button>
+    </div>
+
+    <script>
+        let currentPage = 1;  // Current page number
+        const limit = 5;  // Number of videos to fetch at a time
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Fetch the first page of videos when the page loads
+            await fetchVideos(currentPage, limit);
+        });
+
+        // Load more button event listener
+        document.getElementById('load-more').addEventListener('click', async function() {
+            currentPage++;  // Increment the page number
+            await fetchVideos(currentPage, limit);  // Fetch the next set of videos
+        });
+
+        async function fetchVideos(page, limit) {
+            try {
+                const response = await fetch(`/videos?page=${page}&limit=${limit}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    data.videos.forEach(video => {
+                        const videoUrl = `/video/${video.id}`;
+                        addVideoToPage(videoUrl, video.likes);
+                    });
+
+                    // Show or hide the "Load More" button based on whether there are more videos to load
+                    if (currentPage < data.pages) {
+                        document.getElementById('load-more').style.display = 'block';
+                    } else {
+                        document.getElementById('load-more').style.display = 'none';  // Hide the button when no more videos are left
+                    }
+                } else {
+                    console.error('Failed to load videos');
+                }
+            } catch (error) {
+                console.error('An error occurred while fetching videos:', error);
+            }
+        }
+
+        document.getElementById('background-form').onsubmit = async function(event) {
+            event.preventDefault();
+
+            const formData = new FormData();
+            formData.append('image', document.getElementById('image').files[0]);
+            formData.append('text1', document.getElementById('text1').value);
+            formData.append('text2', document.getElementById('text2').value);
+            formData.append('text3', document.getElementById('text3').value);
+            formData.append('text4', document.getElementById('text4').value);
+
+            const loadingCircle = document.getElementById('loading-circle');
+
+            // Show the loading circle
+            loadingCircle.style.display = 'block';
+
+            try {
+                // First, upload the video data
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Now request the generated video from /video/<video_id>
+                    const videoId = data.video_url.split("/").pop(); // Extract video ID from the URL
+                    const videoResponse = await fetch(`/video/${videoId}`);
+
+                    if (videoResponse.ok) {
+                        // If video is fetched successfully, hide the spinner and add the video to the page
+                        loadingCircle.style.display = 'none';
+                        addVideoToPage(data.video_url, 0);  // Add the new video dynamically
+                        alert('Video successfully uploaded!');
+                    } else {
+                        alert('Failed to load the generated video.');
+                    }
+                } else {
+                    alert(data.error);
+                }
+            } catch (error) {
+                alert('An error occurred while uploading the video.');
+                console.error(error);
+            }
+        };
+
+        function addVideoToPage(videoUrl, likes) {
+            const videoContainer = document.getElementById('videos-container');
+            const videoSection = document.createElement('div');
+            videoSection.classList.add('video-section');
+            videoSection.innerHTML = `
+                <video controls>
+                    <source src="${videoUrl}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div class="likes-count">Likes: ${likes}</div>
+                <button class="like-button">Like</button>
+            `;
+            videoContainer.appendChild(videoSection);
+
+            // Attach event listener to the new "Like" button
+            const likeButton = videoSection.querySelector('.like-button');
+            likeButton.addEventListener('click', function() {
+                likeVideo(videoUrl.split("/").pop());
+            });
+        }
+
+        async function likeVideo(videoId) {
+            try {
+                const response = await fetch(`/like/${videoId}`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const videoSection = document.querySelector(`.video-section`);
+                    const likesCountElement = videoSection.querySelector('.likes-count');
+                    likesCountElement.textContent = `Likes: ${data.likes}`;
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert('An error occurred while liking the video.');
+                console.error(error);
+            }
+        }
+    </script>
+
+</body>
+</html>
